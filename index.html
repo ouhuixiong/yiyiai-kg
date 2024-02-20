@@ -1,0 +1,564 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script>function neighbourhoodHighlight(params) {
+  // console.log("in nieghbourhoodhighlight");
+  allNodes = nodes.get({ returnType: "Object" });
+  // originalNodes = JSON.parse(JSON.stringify(allNodes));
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    highlightActive = true;
+    var i, j;
+    var selectedNode = params.nodes[0];
+    var degrees = 2;
+
+    // mark all nodes as hard to read.
+    for (let nodeId in allNodes) {
+      // nodeColors[nodeId] = allNodes[nodeId].color;
+      allNodes[nodeId].color = "rgba(200,200,200,0.5)";
+      if (allNodes[nodeId].hiddenLabel === undefined) {
+        allNodes[nodeId].hiddenLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+    var connectedNodes = network.getConnectedNodes(selectedNode);
+    var allConnectedNodes = [];
+
+    // get the second degree nodes
+    for (i = 1; i < degrees; i++) {
+      for (j = 0; j < connectedNodes.length; j++) {
+        allConnectedNodes = allConnectedNodes.concat(
+          network.getConnectedNodes(connectedNodes[j])
+        );
+      }
+    }
+
+    // all second degree nodes get a different color and their label back
+    for (i = 0; i < allConnectedNodes.length; i++) {
+      // allNodes[allConnectedNodes[i]].color = "pink";
+      allNodes[allConnectedNodes[i]].color = "rgba(150,150,150,0.75)";
+      if (allNodes[allConnectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[allConnectedNodes[i]].label =
+          allNodes[allConnectedNodes[i]].hiddenLabel;
+        allNodes[allConnectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // all first degree nodes get their own color and their label back
+    for (i = 0; i < connectedNodes.length; i++) {
+      // allNodes[connectedNodes[i]].color = undefined;
+      allNodes[connectedNodes[i]].color = nodeColors[connectedNodes[i]];
+      if (allNodes[connectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[connectedNodes[i]].label =
+          allNodes[connectedNodes[i]].hiddenLabel;
+        allNodes[connectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // the main node gets its own color and its label back.
+    // allNodes[selectedNode].color = undefined;
+    allNodes[selectedNode].color = nodeColors[selectedNode];
+    if (allNodes[selectedNode].hiddenLabel !== undefined) {
+      allNodes[selectedNode].label = allNodes[selectedNode].hiddenLabel;
+      allNodes[selectedNode].hiddenLabel = undefined;
+    }
+  } else if (highlightActive === true) {
+    // console.log("highlightActive was true");
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      // allNodes[nodeId].color = "purple";
+      allNodes[nodeId].color = nodeColors[nodeId];
+      // delete allNodes[nodeId].color;
+      if (allNodes[nodeId].hiddenLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].hiddenLabel;
+        allNodes[nodeId].hiddenLabel = undefined;
+      }
+    }
+    highlightActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    // console.log("Nothing was selected");
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        // allNodes[nodeId].color = {};
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function filterHighlight(params) {
+  allNodes = nodes.get({ returnType: "Object" });
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    filterActive = true;
+    let selectedNodes = params.nodes;
+
+    // hiding all nodes and saving the label
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = true;
+      if (allNodes[nodeId].savedLabel === undefined) {
+        allNodes[nodeId].savedLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+
+    for (let i=0; i < selectedNodes.length; i++) {
+      allNodes[selectedNodes[i]].hidden = false;
+      if (allNodes[selectedNodes[i]].savedLabel !== undefined) {
+        allNodes[selectedNodes[i]].label = allNodes[selectedNodes[i]].savedLabel;
+        allNodes[selectedNodes[i]].savedLabel = undefined;
+      }
+    }
+
+  } else if (filterActive === true) {
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = false;
+      if (allNodes[nodeId].savedLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].savedLabel;
+        allNodes[nodeId].savedLabel = undefined;
+      }
+    }
+    filterActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function selectNode(nodes) {
+  network.selectNodes(nodes);
+  neighbourhoodHighlight({ nodes: nodes });
+  return nodes;
+}
+
+function selectNodes(nodes) {
+  network.selectNodes(nodes);
+  filterHighlight({nodes: nodes});
+  return nodes;
+}
+
+function highlightFilter(filter) {
+  let selectedNodes = []
+  let selectedProp = filter['property']
+  if (filter['item'] === 'node') {
+    let allNodes = nodes.get({ returnType: "Object" });
+    for (let nodeId in allNodes) {
+      if (allNodes[nodeId][selectedProp] && filter['value'].includes((allNodes[nodeId][selectedProp]).toString())) {
+        selectedNodes.push(nodeId)
+      }
+    }
+  }
+  else if (filter['item'] === 'edge'){
+    let allEdges = edges.get({returnType: 'object'});
+    // check if the selected property exists for selected edge and select the nodes connected to the edge
+    for (let edge in allEdges) {
+      if (allEdges[edge][selectedProp] && filter['value'].includes((allEdges[edge][selectedProp]).toString())) {
+        selectedNodes.push(allEdges[edge]['from'])
+        selectedNodes.push(allEdges[edge]['to'])
+      }
+    }
+  }
+  selectNodes(selectedNodes)
+}</script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+            
+            
+            
+            
+            
+                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/css/tom-select.min.css" integrity="sha512-43fHB3GLgZfz8QXl1RPQ8O66oIgv3po9cJ5erMt1c4QISq9dYb195T3vr5ImnJPXuVroKcGBPXBFKETW8jrPNQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+                <script src="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/js/tom-select.complete.js" integrity="sha512-jeF9CfnvzDiw9G9xiksVjxR2lib44Gnovvkv+3CgCG6NXCD4gqlA5nDAVW5WjpA+i+/zKsUWV5xNEbW1X/HH0Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 100%;
+                 height: 900px;
+                 background-color: #ffffff;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+
+             
+             #config {
+                 float: left;
+                 width: 400px;
+                 height: 600px;
+             }
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+                <div id="select-menu" class="card-header">
+                    <div class="row no-gutters">
+                        <div class="col-10 pb-2">
+                            <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            onchange="selectNode([value]);"
+                            id="select-node"
+                            placeholder="Select node..."
+                            >
+                                <option selected>Select a Node by ID</option>
+                                
+                                    <option value="b超检查">b超检查</option>
+                                
+                                    <option value="cleft lip">cleft lip</option>
+                                
+                                    <option value="tooth bud and mandibular fracture">tooth bud and mandibular fracture</option>
+                                
+                                    <option value="上下唇">上下唇</option>
+                                
+                                    <option value="上唇、鼻底完全裂开">上唇、鼻底完全裂开</option>
+                                
+                                    <option value="上唇连续性中断">上唇连续性中断</option>
+                                
+                                    <option value="上唇部分裂">上唇部分裂</option>
+                                
+                                    <option value="单侧唇裂">单侧唇裂</option>
+                                
+                                    <option value="双侧唇裂的对侧存在隐裂或微型唇裂">双侧唇裂的对侧存在隐裂或微型唇裂</option>
+                                
+                                    <option value="唇腭裂">唇腭裂</option>
+                                
+                                    <option value="平凸或扁平">平凸或扁平</option>
+                                
+                                    <option value="正中部分或完全裂开">正中部分或完全裂开</option>
+                                
+                                    <option value="红唇裂">红唇裂</option>
+                                
+                                    <option value="裂隙程度">裂隙程度</option>
+                                
+                                    <option value="鼻底塌陷">鼻底塌陷</option>
+                                
+                                    <option value="鼻底衍形成">鼻底衍形成</option>
+                                
+                                    <option value="鼻翼">鼻翼</option>
+                                
+                                    <option value="w成形术、z成形术等.">w成形术、z成形术等.</option>
+                                
+                                    <option value="局部组织瓣法进行裂隙关闭">局部组织瓣法进行裂隙关闭</option>
+                                
+                                    <option value="一侧或两侧">一侧或两侧</option>
+                                
+                                    <option value="双侧唇裂">双侧唇裂</option>
+                                
+                                    <option value="面横裂">面横裂</option>
+                                
+                                    <option value="三个月至半年">三个月至半年</option>
+                                
+                                    <option value="用鼻模">用鼻模</option>
+                                
+                                    <option value="上唇正中裂">上唇正中裂</option>
+                                
+                                    <option value="鼻部缺损或鼻小柱缺如">鼻部缺损或鼻小柱缺如</option>
+                                
+                                    <option value="上颌突和下颌突未能融合所导致的面横裂或下唇正中裂或下颌裂">上颌突和下颌突未能融合所导致的面横裂或下唇正中裂或下颌裂</option>
+                                
+                                    <option value="唇裂">唇裂</option>
+                                
+                                    <option value="上颌突和侧鼻突未能融合导致的面斜裂">上颌突和侧鼻突未能融合导致的面斜裂</option>
+                                
+                                    <option value="下三角瓣手术法">下三角瓣手术法</option>
+                                
+                                    <option value="对于患侧唇基本正常或过长的病人，慎用传统宽大下三角瓣修复术">对于患侧唇基本正常或过长的病人，慎用传统宽大下三角瓣修复术</option>
+                                
+                                    <option value="严重的完全性唇腭裂患者">严重的完全性唇腭裂患者</option>
+                                
+                                    <option value="瘢痕增生的软膏">瘢痕增生的软膏</option>
+                                
+                                    <option value="何伟">何伟</option>
+                                
+                                    <option value="成员">成员</option>
+                                
+                                    <option value="先天出生缺陷">先天出生缺陷</option>
+                                
+                                    <option value="减张包扎">减张包扎</option>
+                                
+                                    <option value="鼻唇继发畸形">鼻唇继发畸形</option>
+                                
+                                    <option value="激光治�">激光治�</option>
+                                
+                                    <option value="刘树铭">刘树铭</option>
+                                
+                                    <option value="前唇与侧唇相比多短小">前唇与侧唇相比多短小</option>
+                                
+                                    <option value="唇部细微解剖结构破坏">唇部细微解剖结构破坏</option>
+                                
+                                    <option value="牙槽突裂开">牙槽突裂开</option>
+                                
+                                    <option value="白唇皮肤出现线性痕迹">白唇皮肤出现线性痕迹</option>
+                                
+                                    <option value="红唇凹陷">红唇凹陷</option>
+                                
+                                    <option value="鼻小柱短矮">鼻小柱短矮</option>
+                                
+                                    <option value="鼻部畸形">鼻部畸形</option>
+                                
+                                    <option value="单小峰">单小峰</option>
+                                
+                                    <option value="手术当天">手术当天</option>
+                                
+                                    <option value="并发症">并发症</option>
+                                
+                                    <option value="牙槽突裂">牙槽突裂</option>
+                                
+                                    <option value="综合征性唇裂和非综合征性唇裂两类">综合征性唇裂和非综合征性唇裂两类</option>
+                                
+                                    <option value="胚胎发育4～7周时受遗传或胚胎环境因素影响所导致的缺陷">胚胎发育4～7周时受遗传或胚胎环境因素影响所导致的缺陷</option>
+                                
+                                    <option value="鼻唇形态异常">鼻唇形态异常</option>
+                                
+                                    <option value="安金刚">安金刚</option>
+                                
+                                    <option value="开放性方法进行一期鼻畸形整复">开放性方法进行一期鼻畸形整复</option>
+                                
+                                    <option value="适当分离和悬吊鼻翼软骨">适当分离和悬吊鼻翼软骨</option>
+                                
+                                    <option value="张益">张益</option>
+                                
+                                    <option value="组长">组长</option>
+                                
+                                    <option value="彭歆">彭歆</option>
+                                
+                                    <option value="朱洪平">朱洪平</option>
+                                
+                                    <option value="苏家增">苏家增</option>
+                                
+                                    <option value="蔡志刚">蔡志刚</option>
+                                
+                                    <option value="贺洋">贺洋</option>
+                                
+                                    <option value="郭玉兴">郭玉兴</option>
+                                
+                                    <option value="手术创伤过大">手术创伤过大</option>
+                                
+                                    <option value="手术时间">手术时间</option>
+                                
+                                    <option value="唇裂治疗">唇裂治疗</option>
+                                
+                                    <option value="抹芦荟胶外贴">抹芦荟胶外贴</option>
+                                
+                                    <option value="减张胶条">减张胶条</option>
+                                
+                                    <option value="改良旋转推进手术法">改良旋转推进手术法</option>
+                                
+                                    <option value="恢复上唇形态">恢复上唇形态</option>
+                                
+                                    <option value="生理盐水">生理盐水</option>
+                                
+                                    <option value="擦拭清洁伤口">擦拭清洁伤口</option>
+                                
+                                    <option value="畸形程度">畸形程度</option>
+                                
+                                    <option value="外科手术创造更好条件">外科手术创造更好条件</option>
+                                
+                                    <option value="直线缝合手术法">直线缝合手术法</option>
+                                
+                                    <option value="唇白线微小三角瓣法">唇白线微小三角瓣法</option>
+                                
+                                    <option value="鼻唇外形不调">鼻唇外形不调</option>
+                                
+                            </select>
+                        </div>
+                        <div class="col-2 pb-2">
+                            <button type="button" class="btn btn-primary btn-block" onclick="neighbourhoodHighlight({nodes: []});">Reset Selection</button>
+                        </div>
+                    </div>
+                </div>
+            
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+        
+            <div id="config"></div>
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+                  new TomSelect("#select-node",{
+                      create: false,
+                      sortField: {
+                          field: "text",
+                          direction: "asc"
+                      }
+                  });
+              
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"group": 1, "id": "b\u8d85\u68c0\u67e5", "label": "b\u8d85\u68c0\u67e5", "shape": "dot", "size": 16}, {"group": 1, "id": "cleft lip", "label": "cleft lip", "shape": "dot", "size": 1}, {"group": 1, "id": "tooth bud and mandibular fracture", "label": "tooth bud and mandibular fracture", "shape": "dot", "size": 1}, {"group": 1, "id": "\u4e0a\u4e0b\u5507", "label": "\u4e0a\u4e0b\u5507", "shape": "dot", "size": 2}, {"group": 1, "id": "\u4e0a\u5507\u3001\u9f3b\u5e95\u5b8c\u5168\u88c2\u5f00", "label": "\u4e0a\u5507\u3001\u9f3b\u5e95\u5b8c\u5168\u88c2\u5f00", "shape": "dot", "size": 2}, {"group": 1, "id": "\u4e0a\u5507\u8fde\u7eed\u6027\u4e2d\u65ad", "label": "\u4e0a\u5507\u8fde\u7eed\u6027\u4e2d\u65ad", "shape": "dot", "size": 2}, {"group": 1, "id": "\u4e0a\u5507\u90e8\u5206\u88c2", "label": "\u4e0a\u5507\u90e8\u5206\u88c2", "shape": "dot", "size": 2}, {"group": 3, "id": "\u5355\u4fa7\u5507\u88c2", "label": "\u5355\u4fa7\u5507\u88c2", "shape": "dot", "size": 14}, {"group": 3, "id": "\u53cc\u4fa7\u5507\u88c2\u7684\u5bf9\u4fa7\u5b58\u5728\u9690\u88c2\u6216\u5fae\u578b\u5507\u88c2", "label": "\u53cc\u4fa7\u5507\u88c2\u7684\u5bf9\u4fa7\u5b58\u5728\u9690\u88c2\u6216\u5fae\u578b\u5507\u88c2", "shape": "dot", "size": 2}, {"group": 12, "id": "\u5507\u816d\u88c2", "label": "\u5507\u816d\u88c2", "shape": "dot", "size": 3}, {"group": 1, "id": "\u5e73\u51f8\u6216\u6241\u5e73", "label": "\u5e73\u51f8\u6216\u6241\u5e73", "shape": "dot", "size": 2}, {"group": 1, "id": "\u6b63\u4e2d\u90e8\u5206\u6216\u5b8c\u5168\u88c2\u5f00", "label": "\u6b63\u4e2d\u90e8\u5206\u6216\u5b8c\u5168\u88c2\u5f00", "shape": "dot", "size": 2}, {"group": 1, "id": "\u7ea2\u5507\u88c2", "label": "\u7ea2\u5507\u88c2", "shape": "dot", "size": 2}, {"group": 12, "id": "\u88c2\u9699\u7a0b\u5ea6", "label": "\u88c2\u9699\u7a0b\u5ea6", "shape": "dot", "size": 2}, {"group": 1, "id": "\u9f3b\u5e95\u584c\u9677", "label": "\u9f3b\u5e95\u584c\u9677", "shape": "dot", "size": 2}, {"group": 1, "id": "\u9f3b\u5e95\u884d\u5f62\u6210", "label": "\u9f3b\u5e95\u884d\u5f62\u6210", "shape": "dot", "size": 2}, {"group": 1, "id": "\u9f3b\u7ffc", "label": "\u9f3b\u7ffc", "shape": "dot", "size": 2}, {"group": 2, "id": "w\u6210\u5f62\u672f\u3001z\u6210\u5f62\u672f\u7b49.", "label": "w\u6210\u5f62\u672f\u3001z\u6210\u5f62\u672f\u7b49.", "shape": "dot", "size": 1}, {"group": 2, "id": "\u5c40\u90e8\u7ec4\u7ec7\u74e3\u6cd5\u8fdb\u884c\u88c2\u9699\u5173\u95ed", "label": "\u5c40\u90e8\u7ec4\u7ec7\u74e3\u6cd5\u8fdb\u884c\u88c2\u9699\u5173\u95ed", "shape": "dot", "size": 1}, {"group": 3, "id": "\u4e00\u4fa7\u6216\u4e24\u4fa7", "label": "\u4e00\u4fa7\u6216\u4e24\u4fa7", "shape": "dot", "size": 3}, {"group": 3, "id": "\u53cc\u4fa7\u5507\u88c2", "label": "\u53cc\u4fa7\u5507\u88c2", "shape": "dot", "size": 12}, {"group": 3, "id": "\u9762\u6a2a\u88c2", "label": "\u9762\u6a2a\u88c2", "shape": "dot", "size": 3}, {"group": 4, "id": "\u4e09\u4e2a\u6708\u81f3\u534a\u5e74", "label": "\u4e09\u4e2a\u6708\u81f3\u534a\u5e74", "shape": "dot", "size": 1}, {"group": 4, "id": "\u7528\u9f3b\u6a21", "label": "\u7528\u9f3b\u6a21", "shape": "dot", "size": 1}, {"group": 3, "id": "\u4e0a\u5507\u6b63\u4e2d\u88c2", "label": "\u4e0a\u5507\u6b63\u4e2d\u88c2", "shape": "dot", "size": 3}, {"group": 3, "id": "\u9f3b\u90e8\u7f3a\u635f\u6216\u9f3b\u5c0f\u67f1\u7f3a\u5982", "label": "\u9f3b\u90e8\u7f3a\u635f\u6216\u9f3b\u5c0f\u67f1\u7f3a\u5982", "shape": "dot", "size": 3}, {"group": 5, "id": "\u4e0a\u988c\u7a81\u548c\u4e0b\u988c\u7a81\u672a\u80fd\u878d\u5408\u6240\u5bfc\u81f4\u7684\u9762\u6a2a\u88c2\u6216\u4e0b\u5507\u6b63\u4e2d\u88c2\u6216\u4e0b\u988c\u88c2", "label": "\u4e0a\u988c\u7a81\u548c\u4e0b\u988c\u7a81\u672a\u80fd\u878d\u5408\u6240\u5bfc\u81f4\u7684\u9762\u6a2a\u88c2\u6216\u4e0b\u5507\u6b63\u4e2d\u88c2\u6216\u4e0b\u988c\u88c2", "shape": "dot", "size": 1}, {"group": 5, "id": "\u5507\u88c2", "label": "\u5507\u88c2", "shape": "dot", "size": 8}, {"group": 5, "id": "\u4e0a\u988c\u7a81\u548c\u4fa7\u9f3b\u7a81\u672a\u80fd\u878d\u5408\u5bfc\u81f4\u7684\u9762\u659c\u88c2", "label": "\u4e0a\u988c\u7a81\u548c\u4fa7\u9f3b\u7a81\u672a\u80fd\u878d\u5408\u5bfc\u81f4\u7684\u9762\u659c\u88c2", "shape": "dot", "size": 1}, {"group": 6, "id": "\u4e0b\u4e09\u89d2\u74e3\u624b\u672f\u6cd5", "label": "\u4e0b\u4e09\u89d2\u74e3\u624b\u672f\u6cd5", "shape": "dot", "size": 1}, {"group": 6, "id": "\u5bf9\u4e8e\u60a3\u4fa7\u5507\u57fa\u672c\u6b63\u5e38\u6216\u8fc7\u957f\u7684\u75c5\u4eba\uff0c\u614e\u7528\u4f20\u7edf\u5bbd\u5927\u4e0b\u4e09\u89d2\u74e3\u4fee\u590d\u672f", "label": "\u5bf9\u4e8e\u60a3\u4fa7\u5507\u57fa\u672c\u6b63\u5e38\u6216\u8fc7\u957f\u7684\u75c5\u4eba\uff0c\u614e\u7528\u4f20\u7edf\u5bbd\u5927\u4e0b\u4e09\u89d2\u74e3\u4fee\u590d\u672f", "shape": "dot", "size": 1}, {"group": 7, "id": "\u4e25\u91cd\u7684\u5b8c\u5168\u6027\u5507\u816d\u88c2\u60a3\u8005", "label": "\u4e25\u91cd\u7684\u5b8c\u5168\u6027\u5507\u816d\u88c2\u60a3\u8005", "shape": "dot", "size": 1}, {"group": 7, "id": "\u7622\u75d5\u589e\u751f\u7684\u8f6f\u818f", "label": "\u7622\u75d5\u589e\u751f\u7684\u8f6f\u818f", "shape": "dot", "size": 1}, {"group": 8, "id": "\u4f55\u4f1f", "label": "\u4f55\u4f1f", "shape": "dot", "size": 1}, {"group": 8, "id": "\u6210\u5458", "label": "\u6210\u5458", "shape": "dot", "size": 12}, {"group": 5, "id": "\u5148\u5929\u51fa\u751f\u7f3a\u9677", "label": "\u5148\u5929\u51fa\u751f\u7f3a\u9677", "shape": "dot", "size": 1}, {"group": 9, "id": "\u51cf\u5f20\u5305\u624e", "label": "\u51cf\u5f20\u5305\u624e", "shape": "dot", "size": 2}, {"group": 9, "id": "\u9f3b\u5507\u7ee7\u53d1\u7578\u5f62", "label": "\u9f3b\u5507\u7ee7\u53d1\u7578\u5f62", "shape": "dot", "size": 4}, {"group": 9, "id": "\u6fc0\u5149\u6cbb\ufffd", "label": "\u6fc0\u5149\u6cbb\ufffd", "shape": "dot", "size": 2}, {"group": 8, "id": "\u5218\u6811\u94ed", "label": "\u5218\u6811\u94ed", "shape": "dot", "size": 1}, {"group": 3, "id": "\u524d\u5507\u4e0e\u4fa7\u5507\u76f8\u6bd4\u591a\u77ed\u5c0f", "label": "\u524d\u5507\u4e0e\u4fa7\u5507\u76f8\u6bd4\u591a\u77ed\u5c0f", "shape": "dot", "size": 2}, {"group": 3, "id": "\u5507\u90e8\u7ec6\u5fae\u89e3\u5256\u7ed3\u6784\u7834\u574f", "label": "\u5507\u90e8\u7ec6\u5fae\u89e3\u5256\u7ed3\u6784\u7834\u574f", "shape": "dot", "size": 2}, {"group": 3, "id": "\u7259\u69fd\u7a81\u88c2\u5f00", "label": "\u7259\u69fd\u7a81\u88c2\u5f00", "shape": "dot", "size": 2}, {"group": 3, "id": "\u767d\u5507\u76ae\u80a4\u51fa\u73b0\u7ebf\u6027\u75d5\u8ff9", "label": "\u767d\u5507\u76ae\u80a4\u51fa\u73b0\u7ebf\u6027\u75d5\u8ff9", "shape": "dot", "size": 2}, {"group": 3, "id": "\u7ea2\u5507\u51f9\u9677", "label": "\u7ea2\u5507\u51f9\u9677", "shape": "dot", "size": 2}, {"group": 3, "id": "\u9f3b\u5c0f\u67f1\u77ed\u77ee", "label": "\u9f3b\u5c0f\u67f1\u77ed\u77ee", "shape": "dot", "size": 2}, {"group": 3, "id": "\u9f3b\u90e8\u7578\u5f62", "label": "\u9f3b\u90e8\u7578\u5f62", "shape": "dot", "size": 2}, {"group": 8, "id": "\u5355\u5c0f\u5cf0", "label": "\u5355\u5c0f\u5cf0", "shape": "dot", "size": 1}, {"group": 12, "id": "\u624b\u672f\u5f53\u5929", "label": "\u624b\u672f\u5f53\u5929", "shape": "dot", "size": 1}, {"group": 5, "id": "\u5e76\u53d1\u75c7", "label": "\u5e76\u53d1\u75c7", "shape": "dot", "size": 1}, {"group": 5, "id": "\u7259\u69fd\u7a81\u88c2", "label": "\u7259\u69fd\u7a81\u88c2", "shape": "dot", "size": 1}, {"group": 5, "id": "\u7efc\u5408\u5f81\u6027\u5507\u88c2\u548c\u975e\u7efc\u5408\u5f81\u6027\u5507\u88c2\u4e24\u7c7b", "label": "\u7efc\u5408\u5f81\u6027\u5507\u88c2\u548c\u975e\u7efc\u5408\u5f81\u6027\u5507\u88c2\u4e24\u7c7b", "shape": "dot", "size": 1}, {"group": 5, "id": "\u80da\u80ce\u53d1\u80b24\uff5e7\u5468\u65f6\u53d7\u9057\u4f20\u6216\u80da\u80ce\u73af\u5883\u56e0\u7d20\u5f71\u54cd\u6240\u5bfc\u81f4\u7684\u7f3a\u9677", "label": "\u80da\u80ce\u53d1\u80b24\uff5e7\u5468\u65f6\u53d7\u9057\u4f20\u6216\u80da\u80ce\u73af\u5883\u56e0\u7d20\u5f71\u54cd\u6240\u5bfc\u81f4\u7684\u7f3a\u9677", "shape": "dot", "size": 1}, {"group": 5, "id": "\u9f3b\u5507\u5f62\u6001\u5f02\u5e38", "label": "\u9f3b\u5507\u5f62\u6001\u5f02\u5e38", "shape": "dot", "size": 1}, {"group": 8, "id": "\u5b89\u91d1\u521a", "label": "\u5b89\u91d1\u521a", "shape": "dot", "size": 1}, {"group": 15, "id": "\u5f00\u653e\u6027\u65b9\u6cd5\u8fdb\u884c\u4e00\u671f\u9f3b\u7578\u5f62\u6574\u590d", "label": "\u5f00\u653e\u6027\u65b9\u6cd5\u8fdb\u884c\u4e00\u671f\u9f3b\u7578\u5f62\u6574\u590d", "shape": "dot", "size": 1}, {"group": 15, "id": "\u9002\u5f53\u5206\u79bb\u548c\u60ac\u540a\u9f3b\u7ffc\u8f6f\u9aa8", "label": "\u9002\u5f53\u5206\u79bb\u548c\u60ac\u540a\u9f3b\u7ffc\u8f6f\u9aa8", "shape": "dot", "size": 1}, {"group": 8, "id": "\u5f20\u76ca", "label": "\u5f20\u76ca", "shape": "dot", "size": 2}, {"group": 8, "id": "\u7ec4\u957f", "label": "\u7ec4\u957f", "shape": "dot", "size": 2}, {"group": 8, "id": "\u5f6d\u6b46", "label": "\u5f6d\u6b46", "shape": "dot", "size": 1}, {"group": 8, "id": "\u6731\u6d2a\u5e73", "label": "\u6731\u6d2a\u5e73", "shape": "dot", "size": 1}, {"group": 8, "id": "\u82cf\u5bb6\u589e", "label": "\u82cf\u5bb6\u589e", "shape": "dot", "size": 1}, {"group": 8, "id": "\u8521\u5fd7\u521a", "label": "\u8521\u5fd7\u521a", "shape": "dot", "size": 1}, {"group": 8, "id": "\u8d3a\u6d0b", "label": "\u8d3a\u6d0b", "shape": "dot", "size": 1}, {"group": 8, "id": "\u90ed\u7389\u5174", "label": "\u90ed\u7389\u5174", "shape": "dot", "size": 1}, {"group": 9, "id": "\u624b\u672f\u521b\u4f24\u8fc7\u5927", "label": "\u624b\u672f\u521b\u4f24\u8fc7\u5927", "shape": "dot", "size": 1}, {"group": 13, "id": "\u624b\u672f\u65f6\u95f4", "label": "\u624b\u672f\u65f6\u95f4", "shape": "dot", "size": 1}, {"group": 13, "id": "\u5507\u88c2\u6cbb\u7597", "label": "\u5507\u88c2\u6cbb\u7597", "shape": "dot", "size": 1}, {"group": 10, "id": "\u62b9\u82a6\u835f\u80f6\u5916\u8d34", "label": "\u62b9\u82a6\u835f\u80f6\u5916\u8d34", "shape": "dot", "size": 1}, {"group": 10, "id": "\u51cf\u5f20\u80f6\u6761", "label": "\u51cf\u5f20\u80f6\u6761", "shape": "dot", "size": 1}, {"group": 16, "id": "\u6539\u826f\u65cb\u8f6c\u63a8\u8fdb\u624b\u672f\u6cd5", "label": "\u6539\u826f\u65cb\u8f6c\u63a8\u8fdb\u624b\u672f\u6cd5", "shape": "dot", "size": 1}, {"group": 16, "id": "\u6062\u590d\u4e0a\u5507\u5f62\u6001", "label": "\u6062\u590d\u4e0a\u5507\u5f62\u6001", "shape": "dot", "size": 1}, {"group": 17, "id": "\u751f\u7406\u76d0\u6c34", "label": "\u751f\u7406\u76d0\u6c34", "shape": "dot", "size": 1}, {"group": 17, "id": "\u64e6\u62ed\u6e05\u6d01\u4f24\u53e3", "label": "\u64e6\u62ed\u6e05\u6d01\u4f24\u53e3", "shape": "dot", "size": 1}, {"group": 14, "id": "\u7578\u5f62\u7a0b\u5ea6", "label": "\u7578\u5f62\u7a0b\u5ea6", "shape": "dot", "size": 1}, {"group": 14, "id": "\u5916\u79d1\u624b\u672f\u521b\u9020\u66f4\u597d\u6761\u4ef6", "label": "\u5916\u79d1\u624b\u672f\u521b\u9020\u66f4\u597d\u6761\u4ef6", "shape": "dot", "size": 1}, {"group": 11, "id": "\u76f4\u7ebf\u7f1d\u5408\u624b\u672f\u6cd5", "label": "\u76f4\u7ebf\u7f1d\u5408\u624b\u672f\u6cd5", "shape": "dot", "size": 1}, {"group": 11, "id": "\u5507\u767d\u7ebf\u5fae\u5c0f\u4e09\u89d2\u74e3\u6cd5", "label": "\u5507\u767d\u7ebf\u5fae\u5c0f\u4e09\u89d2\u74e3\u6cd5", "shape": "dot", "size": 1}, {"group": 9, "id": "\u9f3b\u5507\u5916\u5f62\u4e0d\u8c03", "label": "\u9f3b\u5507\u5916\u5f62\u4e0d\u8c03", "shape": "dot", "size": 1}]);
+                  edges = new vis.DataSet([{"from": "b\u8d85\u68c0\u67e5", "title": "contextual proximity", "to": "cleft lip", "width": 1}, {"from": "b\u8d85\u68c0\u67e5", "title": "contextual proximity", "to": "tooth bud and mandibular fracture", "width": 1}, {"from": "b\u8d85\u68c0\u67e5", "title": "contextual proximity", "to": "\u4e0a\u4e0b\u5507", "width": 1}, {"from": "b\u8d85\u68c0\u67e5", "title": "contextual proximity", "to": "\u4e0a\u5507\u3001\u9f3b\u5e95\u5b8c\u5168\u88c2\u5f00", "width": 1}, {"from": "b\u8d85\u68c0\u67e5", "title": "contextual proximity", "to": "\u4e0a\u5507\u8fde\u7eed\u6027\u4e2d\u65ad", "width": 1}, {"from": "b\u8d85\u68c0\u67e5", "title": "contextual proximity", "to": "\u4e0a\u5507\u90e8\u5206\u88c2", "width": 1}, {"from": "b\u8d85\u68c0\u67e5", "title": "contextual proximity", "to": "\u5355\u4fa7\u5507\u88c2", "width": 1}, {"from": "b\u8d85\u68c0\u67e5", "title": "contextual proximity", "to": "\u53cc\u4fa7\u5507\u88c2\u7684\u5bf9\u4fa7\u5b58\u5728\u9690\u88c2\u6216\u5fae\u578b\u5507\u88c2", "width": 1}, {"from": "b\u8d85\u68c0\u67e5", "title": "contextual proximity", "to": "\u5507\u816d\u88c2", "width": 1}, {"from": "b\u8d85\u68c0\u67e5", "title": "contextual proximity", "to": "\u5e73\u51f8\u6216\u6241\u5e73", "width": 1}, {"from": "b\u8d85\u68c0\u67e5", "title": "contextual proximity", "to": "\u6b63\u4e2d\u90e8\u5206\u6216\u5b8c\u5168\u88c2\u5f00", "width": 1}, {"from": "b\u8d85\u68c0\u67e5", "title": "contextual proximity", "to": "\u7ea2\u5507\u88c2", "width": 1}, {"from": "b\u8d85\u68c0\u67e5", "title": "contextual proximity", "to": "\u88c2\u9699\u7a0b\u5ea6", "width": 1}, {"from": "b\u8d85\u68c0\u67e5", "title": "contextual proximity", "to": "\u9f3b\u5e95\u584c\u9677", "width": 1}, {"from": "b\u8d85\u68c0\u67e5", "title": "contextual proximity", "to": "\u9f3b\u5e95\u884d\u5f62\u6210", "width": 1}, {"from": "b\u8d85\u68c0\u67e5", "title": "contextual proximity", "to": "\u9f3b\u7ffc", "width": 1}, {"from": "w\u6210\u5f62\u672f\u3001z\u6210\u5f62\u672f\u7b49.", "title": "\u9700\u8981\u8003\u8651\u517c\u987e\u5f62\u6001\u548c\u529f\u80fd", "to": "\u5c40\u90e8\u7ec4\u7ec7\u74e3\u6cd5\u8fdb\u884c\u88c2\u9699\u5173\u95ed", "width": 1}, {"from": "\u4e00\u4fa7\u6216\u4e24\u4fa7", "title": "contextual proximity", "to": "\u5355\u4fa7\u5507\u88c2", "width": 1}, {"from": "\u4e00\u4fa7\u6216\u4e24\u4fa7", "title": "contextual proximity", "to": "\u53cc\u4fa7\u5507\u88c2", "width": 1}, {"from": "\u4e00\u4fa7\u6216\u4e24\u4fa7", "title": "\u9762\u6a2a\u88c2\u53ef\u89c1\u4e00\u4fa7\u6216\u4e24\u4fa7\u3002", "to": "\u9762\u6a2a\u88c2", "width": 1}, {"from": "\u4e09\u4e2a\u6708\u81f3\u534a\u5e74", "title": "\u53ef\u6709\u6548\u4fdd\u8bc1\u4e24\u4fa7\u9f3b\u5b54\u5927\u5c0f\u3001\u9f3b\u7ffc\u5bf9\u79f0\u6027", "to": "\u7528\u9f3b\u6a21", "width": 1}, {"from": "\u4e0a\u4e0b\u5507", "title": "May coexist with other types of plical fissures", "to": "\u6b63\u4e2d\u90e8\u5206\u6216\u5b8c\u5168\u88c2\u5f00", "width": 1}, {"from": "\u4e0a\u5507\u3001\u9f3b\u5e95\u5b8c\u5168\u88c2\u5f00", "title": "II and III degree plical fissures, may coexist", "to": "\u4e0a\u5507\u90e8\u5206\u88c2", "width": 1}, {"from": "\u4e0a\u5507\u6b63\u4e2d\u88c2", "title": "contextual proximity", "to": "\u5355\u4fa7\u5507\u88c2", "width": 1}, {"from": "\u4e0a\u5507\u6b63\u4e2d\u88c2", "title": "contextual proximity", "to": "\u53cc\u4fa7\u5507\u88c2", "width": 1}, {"from": "\u4e0a\u5507\u6b63\u4e2d\u88c2", "title": "\u4e0a\u5507\u6b63\u4e2d\u88c2\u53ef\u89c1\u4e0a\u5507\u6b63\u4e2d\u90e8\u5206\u6216\u5b8c\u5168\u88c2\u5f00\uff0c\u53ef\u4f34\u524d\u988c\u9aa8\u7f3a\u635f\u6216\u9f3b\u5c0f\u67f1\u7f3a\u5982\u3002", "to": "\u9f3b\u90e8\u7f3a\u635f\u6216\u9f3b\u5c0f\u67f1\u7f3a\u5982", "width": 1}, {"from": "\u4e0a\u5507\u8fde\u7eed\u6027\u4e2d\u65ad", "title": "I degree plical fissure", "to": "\u7ea2\u5507\u88c2", "width": 1}, {"from": "\u4e0a\u988c\u7a81\u548c\u4e0b\u988c\u7a81\u672a\u80fd\u878d\u5408\u6240\u5bfc\u81f4\u7684\u9762\u6a2a\u88c2\u6216\u4e0b\u5507\u6b63\u4e2d\u88c2\u6216\u4e0b\u988c\u88c2", "title": "\u7f55\u89c1\u7684\u5507\u88c2\u7c7b\u578b\u8fd8\u5305\u62ec\u4e24\u4fa7\u4e2d\u9f3b\u7a81\u672a\u80fd\u878d\u5408\u5bfc\u81f4\u7684\u4e0a\u5507\u6b63\u4e2d\u88c2\uff0c\u8fd9\u4e9b\u7f55\u89c1\u5507\u88c2\u7c7b\u578b\uff0c\u4e5f\u9700\u8981\u8fdb\u884c\u5916\u79d1\u624b\u672f\u4fee\u590d\u6cbb\u7597\u3002,contextual proximity", "to": "\u5507\u88c2", "width": 1}, {"from": "\u4e0a\u988c\u7a81\u548c\u4fa7\u9f3b\u7a81\u672a\u80fd\u878d\u5408\u5bfc\u81f4\u7684\u9762\u659c\u88c2", "title": "\u8fd9\u4e9b\u7f55\u89c1\u5507\u88c2\u7c7b\u578b\uff0c\u4e5f\u9700\u8981\u8fdb\u884c\u5916\u79d1\u624b\u672f\u4fee\u590d\u6cbb\u7597\u3002,contextual proximity", "to": "\u5507\u88c2", "width": 1}, {"from": "\u4e0b\u4e09\u89d2\u74e3\u624b\u672f\u6cd5", "title": "\u53ef\u4ee5\u9009\u7528", "to": "\u5bf9\u4e8e\u60a3\u4fa7\u5507\u57fa\u672c\u6b63\u5e38\u6216\u8fc7\u957f\u7684\u75c5\u4eba\uff0c\u614e\u7528\u4f20\u7edf\u5bbd\u5927\u4e0b\u4e09\u89d2\u74e3\u4fee\u590d\u672f", "width": 1}, {"from": "\u4e25\u91cd\u7684\u5b8c\u5168\u6027\u5507\u816d\u88c2\u60a3\u8005", "title": "\u5bf9\u4e8e\u4e25\u91cd\u7684\u5b8c\u5168\u6027\u5507\u816d\u88c2\u60a3\u8005\uff0c\u53ef\u5728\u51fa\u751f\u540e\u5f00\u59cb\u8fdb\u884c\u672f\u524d\u6b63\u7578\u6cbb\u7596\uff0c\u7f29\u7a84\u88c2\u9699\u4ee5\u964d\u4f4e\u7578\u5f62\u7a0b\u5ea6\uff0c\u4e3a\u5916\u79d1\u624b\u672f\u521b\u9020\u66f4\u597d\u6761\u4ef6\uff0c\u53ef\u4f7f\u7528\u7845\u80f6\u8d34\u6216\u67d3\u6599\u6fc0\u5149\u6cbb\u7597\uff0c\u6d82\u62b9\u6291\u5236\u7622\u75d5\u589e\u751f\u7684\u8f6f\u818f\uff0c\u9884\u9632\u7622\u75d5\u589e\u751f", "to": "\u7622\u75d5\u589e\u751f\u7684\u8f6f\u818f", "width": 1}, {"from": "\u4f55\u4f1f", "title": "contextual proximity", "to": "\u6210\u5458", "width": 1}, {"from": "\u5148\u5929\u51fa\u751f\u7f3a\u9677", "title": "\u5507\u88c2\u662f\u53e3\u8154\u988c\u9762\u90e8\u6700\u5e38\u89c1\u7684\u5148\u5929\u51fa\u751f\u7f3a\u9677\u4e2d\u7684\u4e00\u79cd\u3002,contextual proximity", "to": "\u5507\u88c2", "width": 1}, {"from": "\u51cf\u5f20\u5305\u624e", "title": "contextual proximity", "to": "\u9f3b\u5507\u7ee7\u53d1\u7578\u5f62", "width": 1}, {"from": "\u51cf\u5f20\u5305\u624e", "title": "\u4f7f\u7528\u90fd\u80fd\u6709\u6548\u9884\u9632\u3002", "to": "\u6fc0\u5149\u6cbb\ufffd", "width": 1}, {"from": "\u5218\u6811\u94ed", "title": "contextual proximity", "to": "\u6210\u5458", "width": 1}, {"from": "\u524d\u5507\u4e0e\u4fa7\u5507\u76f8\u6bd4\u591a\u77ed\u5c0f", "title": "contextual proximity", "to": "\u5355\u4fa7\u5507\u88c2", "width": 1}, {"from": "\u524d\u5507\u4e0e\u4fa7\u5507\u76f8\u6bd4\u591a\u77ed\u5c0f", "title": "\u53cc\u4fa7\u4e0a\u5507\u5b8c\u5168\u88c2\u5f00\u8005\uff0c\u524d\u988c\u9aa8\u5e38\u8f83\u7a81\u51fa\u6216\u4e0a\u7fd8\uff0c\u524d\u5507\u4e0e\u4fa7\u5507\u76f8\u6bd4\u591a\u77ed\u5c0f\u3002,contextual proximity", "to": "\u53cc\u4fa7\u5507\u88c2", "width": 1}, {"from": "\u5355\u4fa7\u5507\u88c2", "title": "contextual proximity", "to": "\u53cc\u4fa7\u5507\u88c2", "width": 1}, {"from": "\u5355\u4fa7\u5507\u88c2", "title": "May occur with II or III degree plical fissures", "to": "\u53cc\u4fa7\u5507\u88c2\u7684\u5bf9\u4fa7\u5b58\u5728\u9690\u88c2\u6216\u5fae\u578b\u5507\u88c2", "width": 1}, {"from": "\u5355\u4fa7\u5507\u88c2", "title": "contextual proximity", "to": "\u5507\u90e8\u7ec6\u5fae\u89e3\u5256\u7ed3\u6784\u7834\u574f", "width": 1}, {"from": "\u5355\u4fa7\u5507\u88c2", "title": "contextual proximity", "to": "\u7259\u69fd\u7a81\u88c2\u5f00", "width": 1}, {"from": "\u5355\u4fa7\u5507\u88c2", "title": "contextual proximity", "to": "\u767d\u5507\u76ae\u80a4\u51fa\u73b0\u7ebf\u6027\u75d5\u8ff9", "width": 1}, {"from": "\u5355\u4fa7\u5507\u88c2", "title": "contextual proximity", "to": "\u7ea2\u5507\u51f9\u9677", "width": 1}, {"from": "\u5355\u4fa7\u5507\u88c2", "title": "contextual proximity", "to": "\u9762\u6a2a\u88c2", "width": 1}, {"from": "\u5355\u4fa7\u5507\u88c2", "title": "contextual proximity", "to": "\u9f3b\u5c0f\u67f1\u77ed\u77ee", "width": 1}, {"from": "\u5355\u4fa7\u5507\u88c2", "title": "contextual proximity", "to": "\u9f3b\u90e8\u7578\u5f62", "width": 1}, {"from": "\u5355\u4fa7\u5507\u88c2", "title": "contextual proximity", "to": "\u9f3b\u90e8\u7f3a\u635f\u6216\u9f3b\u5c0f\u67f1\u7f3a\u5982", "width": 1}, {"from": "\u5355\u5c0f\u5cf0", "title": "contextual proximity", "to": "\u6210\u5458", "width": 1}, {"from": "\u53cc\u4fa7\u5507\u88c2", "title": "contextual proximity", "to": "\u5507\u90e8\u7ec6\u5fae\u89e3\u5256\u7ed3\u6784\u7834\u574f", "width": 1}, {"from": "\u53cc\u4fa7\u5507\u88c2", "title": "contextual proximity", "to": "\u7259\u69fd\u7a81\u88c2\u5f00", "width": 1}, {"from": "\u53cc\u4fa7\u5507\u88c2", "title": "contextual proximity", "to": "\u767d\u5507\u76ae\u80a4\u51fa\u73b0\u7ebf\u6027\u75d5\u8ff9", "width": 1}, {"from": "\u53cc\u4fa7\u5507\u88c2", "title": "contextual proximity", "to": "\u7ea2\u5507\u51f9\u9677", "width": 1}, {"from": "\u53cc\u4fa7\u5507\u88c2", "title": "contextual proximity", "to": "\u9762\u6a2a\u88c2", "width": 1}, {"from": "\u53cc\u4fa7\u5507\u88c2", "title": "contextual proximity", "to": "\u9f3b\u5c0f\u67f1\u77ed\u77ee", "width": 1}, {"from": "\u53cc\u4fa7\u5507\u88c2", "title": "contextual proximity", "to": "\u9f3b\u90e8\u7578\u5f62", "width": 1}, {"from": "\u53cc\u4fa7\u5507\u88c2", "title": "contextual proximity", "to": "\u9f3b\u90e8\u7f3a\u635f\u6216\u9f3b\u5c0f\u67f1\u7f3a\u5982", "width": 1}, {"from": "\u5507\u816d\u88c2", "title": "\u53ef\u80fd\u5728\u624b\u672f\u5f53\u5929\u51fa\u73b0\u5e76\u53d1\u75c7\uff0c\u5982\u6c34\u80bf\u548c\u51fa\u8840", "to": "\u624b\u672f\u5f53\u5929", "width": 1}, {"from": "\u5507\u816d\u88c2", "title": "Associated with heart development abnormalities", "to": "\u88c2\u9699\u7a0b\u5ea6", "width": 1}, {"from": "\u5507\u88c2", "title": "\u5305\u62ec\u54bd\u5589\u90e8\u6c34\u80bf\u3001\u51fa\u8840\u3001\u521b\u53e3\u88c2\u5f00\u548c\u4f24\u53e3\u611f\u67d3\u7b49\uff0c\u5728\u624b\u672f\u5f53\u5929\u6216\u8005\u624b\u672f\u540e\u4e00\u5468\u5185\u6216\u8005\u672f\u540e\u62c6\u7ebf\u540e\u51fa\u73b0", "to": "\u5e76\u53d1\u75c7", "width": 1}, {"from": "\u5507\u88c2", "title": "contextual proximity", "to": "\u7259\u69fd\u7a81\u88c2", "width": 1}, {"from": "\u5507\u88c2", "title": "contextual proximity", "to": "\u7efc\u5408\u5f81\u6027\u5507\u88c2\u548c\u975e\u7efc\u5408\u5f81\u6027\u5507\u88c2\u4e24\u7c7b", "width": 1}, {"from": "\u5507\u88c2", "title": "contextual proximity", "to": "\u80da\u80ce\u53d1\u80b24\uff5e7\u5468\u65f6\u53d7\u9057\u4f20\u6216\u80da\u80ce\u73af\u5883\u56e0\u7d20\u5f71\u54cd\u6240\u5bfc\u81f4\u7684\u7f3a\u9677", "width": 1}, {"from": "\u5507\u88c2", "title": "contextual proximity", "to": "\u9f3b\u5507\u5f62\u6001\u5f02\u5e38", "width": 1}, {"from": "\u5b89\u91d1\u521a", "title": "contextual proximity", "to": "\u6210\u5458", "width": 1}, {"from": "\u5e73\u51f8\u6216\u6241\u5e73", "title": "May occur with II or III degree plical fissures", "to": "\u9f3b\u7ffc", "width": 1}, {"from": "\u5f00\u653e\u6027\u65b9\u6cd5\u8fdb\u884c\u4e00\u671f\u9f3b\u7578\u5f62\u6574\u590d", "title": "\u53ef\u660e\u663e\u6539\u5584\u9f3b\u7578\u5f62\u7a0b\u5ea6", "to": "\u9002\u5f53\u5206\u79bb\u548c\u60ac\u540a\u9f3b\u7ffc\u8f6f\u9aa8", "width": 1}, {"from": "\u5f20\u76ca", "title": "contextual proximity", "to": "\u6210\u5458", "width": 1}, {"from": "\u5f20\u76ca", "title": "\u662f\u672c\u6307\u5357\u7684\u7f16\u5199\u548c\u5ba1\u5b9a\u4e13\u5bb6\u7ec4\u7684\u8d1f\u8d23\u4eba", "to": "\u7ec4\u957f", "width": 1}, {"from": "\u5f6d\u6b46", "title": "contextual proximity", "to": "\u6210\u5458", "width": 1}, {"from": "\u6210\u5458", "title": "\u662f\u53c2\u4e0e\u4e86\u7f16\u5199\u548c\u5ba1\u5b9a\u8be5\u6307\u5357\u7684\u4e13\u5bb6\u4e4b\u4e00\uff0c\u59d3\u540d\u4e3a\u6731\u6d2a\u5e73,contextual proximity", "to": "\u6731\u6d2a\u5e73", "width": 1}, {"from": "\u6210\u5458", "title": "contextual proximity", "to": "\u7ec4\u957f", "width": 1}, {"from": "\u6210\u5458", "title": "\u662f\u53c2\u4e0e\u4e86\u7f16\u5199\u548c\u5ba1\u5b9a\u8be5\u6307\u5357\u7684\u4e13\u5bb6\u4e4b\u4e00\uff0c\u59d3\u540d\u4e3a\u82cf\u5bb6\u589e,contextual proximity", "to": "\u82cf\u5bb6\u589e", "width": 1}, {"from": "\u6210\u5458", "title": "\u662f\u53c2\u4e0e\u4e86\u7f16\u5199\u548c\u5ba1\u5b9a\u8be5\u6307\u5357\u7684\u4e13\u5bb6\u4e4b\u4e00\uff0c\u59d3\u540d\u4e3a\u8521\u5fd7\u521a,contextual proximity", "to": "\u8521\u5fd7\u521a", "width": 1}, {"from": "\u6210\u5458", "title": "\u662f\u53c2\u4e0e\u4e86\u7f16\u5199\u548c\u5ba1\u5b9a\u8be5\u6307\u5357\u7684\u4e13\u5bb6\u4e4b\u4e00\uff0c\u59d3\u540d\u4e3a\u8d3a\u6d0b,contextual proximity", "to": "\u8d3a\u6d0b", "width": 1}, {"from": "\u6210\u5458", "title": "\u662f\u53c2\u4e0e\u4e86\u7f16\u5199\u548c\u5ba1\u5b9a\u8be5\u6307\u5357\u7684\u4e13\u5bb6\u4e4b\u4e00\uff0c\u59d3\u540d\u4e3a\u90ed\u7389\u5174,contextual proximity", "to": "\u90ed\u7389\u5174", "width": 1}, {"from": "\u624b\u672f\u521b\u4f24\u8fc7\u5927", "title": "contextual proximity", "to": "\u9f3b\u5507\u7ee7\u53d1\u7578\u5f62", "width": 1}, {"from": "\u624b\u672f\u65f6\u95f4", "title": "\u5982\u679c\u88c2\u9699\u5bbd\u5927\u6216\u8005\u9f3b\u7578\u5f62\u4e25\u91cd\uff0c\u53ef\u5728\u51fa\u751f\u540e\u5f00\u59cb\u8fdb\u884c\u672f\u524d\u6b63\u7578\u6cbb\u7596\uff0c\u7f29\u7a84\u88c2\u9699\u4ee5\u964d\u4f4e\u7578\u5f62\u7a0b\u5ea6\uff0c\u4e3a\u5916\u79d1\u624b\u672f\u521b\u9020\u66f4\u597d\u6761\u4ef6\uff0c\u83b7\u5f97\u66f4\u597d\u624b\u672f\u4fee\u590d\u6548\u679c", "to": "\u5507\u88c2\u6cbb\u7597", "width": 1}, {"from": "\u62b9\u82a6\u835f\u80f6\u5916\u8d34", "title": "\u672f\u540e\u5373\u523b\u4f24\u53e3\u53ef\u6d82", "to": "\u51cf\u5f20\u80f6\u6761", "width": 1}, {"from": "\u6539\u826f\u65cb\u8f6c\u63a8\u8fdb\u624b\u672f\u6cd5", "title": "\u76ee\u524d\u6700\u4e3a\u5e38\u7528\u7684\u65b9\u6cd5\uff0c\u53ef\u6709\u6548\u4e0b\u964d\u660e\u663e\u4e0a\u63d0\u7684\u60a3\u4fa7\u5507\u5cf0", "to": "\u6062\u590d\u4e0a\u5507\u5f62\u6001", "width": 1}, {"from": "\u6fc0\u5149\u6cbb\ufffd", "title": "contextual proximity", "to": "\u9f3b\u5507\u7ee7\u53d1\u7578\u5f62", "width": 1}, {"from": "\u751f\u7406\u76d0\u6c34", "title": "\u672f\u540e24\u5c0f\u65f6\u7528", "to": "\u64e6\u62ed\u6e05\u6d01\u4f24\u53e3", "width": 1}, {"from": "\u7578\u5f62\u7a0b\u5ea6", "title": "\u5bf9\u4e8e\u4e25\u91cd\u7684\u5b8c\u5168\u6027\u5507\u816d\u88c2\u60a3\u8005\uff0c\u53ef\u5728\u51fa\u751f\u540e\u5f00\u59cb\u8fdb\u884c\u672f\u524d\u6b63\u7578\u6cbb\u7596\uff0c\u7f29\u7a84\u88c2\u9699\u4ee5\u964d\u4f4e\u7578\u5f62\u7a0b\u5ea6", "to": "\u5916\u79d1\u624b\u672f\u521b\u9020\u66f4\u597d\u6761\u4ef6", "width": 1}, {"from": "\u76f4\u7ebf\u7f1d\u5408\u624b\u672f\u6cd5", "title": "\u53ef\u6269\u5c55\u76f4\u7ebf\u6cd5\u7684\u9002\u5e94\u8bc1\uff0c\u591a\u7528\u4e8e\u5065\u60a3\u4fa7\u5507\u5cf0\u9ad8\u5ea6\u76f8\u5dee\u4e0d\u5927\u7684\u5507\u88c2", "to": "\u5507\u767d\u7ebf\u5fae\u5c0f\u4e09\u89d2\u74e3\u6cd5", "width": 1}, {"from": "\u9f3b\u5507\u5916\u5f62\u4e0d\u8c03", "title": "\u591a\u5728\u672f\u540e\u8fdc\u671f\u51fa\u73b0\uff0c\u53ef\u5728\u672f\u540e\u4e00\u5e74\u540e\u81f3\u5b66\u9f84\u524d\u62e9\u671f\u8fdb\u884c\u4e8c\u6b21\u624b\u672f\u3002,contextual proximity", "to": "\u9f3b\u5507\u7ee7\u53d1\u7578\u5f62", "width": 1}, {"from": "\u9f3b\u5e95\u584c\u9677", "title": "May occur with II or III degree plical fissures", "to": "\u9f3b\u5e95\u884d\u5f62\u6210", "width": 1}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {
+    "configure": {
+        "enabled": true,
+        "filter": [
+            "physics"
+        ]
+    },
+    "edges": {
+        "color": {
+            "inherit": true
+        },
+        "smooth": {
+            "enabled": true,
+            "type": "dynamic"
+        }
+    },
+    "interaction": {
+        "dragNodes": true,
+        "hideEdgesOnDrag": false,
+        "hideNodesOnDrag": false
+    },
+    "physics": {
+        "enabled": true,
+        "forceAtlas2Based": {
+            "avoidOverlap": 0,
+            "centralGravity": 0.015,
+            "damping": 0.4,
+            "gravitationalConstant": -31,
+            "springConstant": 0.08,
+            "springLength": 100
+        },
+        "solver": "forceAtlas2Based",
+        "stabilization": {
+            "enabled": true,
+            "fit": true,
+            "iterations": 1000,
+            "onlyDynamicEdges": false,
+            "updateInterval": 50
+        }
+    }
+};
+
+                  
+
+
+                  
+                  // if this network requires displaying the configure window,
+                  // put it in its div
+                  options.configure["container"] = document.getElementById("config");
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+                    network.on("selectNode", neighbourhoodHighlight);
+                  
+
+                  
+
+
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>
